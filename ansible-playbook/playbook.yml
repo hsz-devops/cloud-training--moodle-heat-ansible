@@ -10,3 +10,18 @@
         - apache2
         - mysql-client
         - php5
+        - graphviz
+        - aspell
+        - php5-pspell
+        - php5-curl
+        - php5-gd
+        - php5-intl
+        - php5-mysql
+        - php5-xmlrpc
+        - php5-ldap
+        - clamav
+      register: install_packages
+
+    - name: Restart Apache
+      service: name=apache2 state=restarted
+      when: install_packages.changed
