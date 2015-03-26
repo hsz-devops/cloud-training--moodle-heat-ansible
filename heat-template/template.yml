@@ -27,6 +27,15 @@ parameters:
         - python-pip
         - python-apt
         - python-dev
+      write_files:
+        - path: /opt/cloud-training/inventory
+          content: |
+            [all:vars]
+            database_hostname=%database_hostname%
+            database_password=%database_password%
+            
+            [local]
+            localhost    ansible_connection=local
       runcmd:
         - |
           /usr/bin/pip install --upgrade pip
@@ -104,7 +113,7 @@ resources:
           params:
             "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
       flavor: 8 GB General Purpose v1
-      image: Ubuntu 12.04 LTS (Precise Pangolin) (PVHVM)
+      image: Ubuntu 14.04 LTS (Precise Pangolin) (PVHVM)
       networks:
         - uuid: 00000000-0000-0000-0000-000000000000
         - uuid: 11111111-1111-1111-1111-111111111111
@@ -118,19 +127,8 @@ resources:
           template: { get_param: template_user_data }
           params:
             "%swift_signal_notify%": { get_attr: [ swift_signal_handle_app1, curl_cli ] }
-      personality:
-        "/opt/inventory":
-          str_replace:
-            template: |
-              [all:vars]
-              database_hostname=%database_hostname%
-              database_password=%database_password%
-              
-              [local]
-              localhost    ansible_connection=local
-            params:
-              "%database_hostname%": { get_attr: [ database, hostname ] }
-              "%database_password%": { get_attr: [ password, value ] }
+            "%database_hostname%": { get_attr: [ database, hostname ] }
+            "%database_password%": { get_attr: [ password, value ] }
 
   dns:
     type: Rackspace::Cloud::DNS
