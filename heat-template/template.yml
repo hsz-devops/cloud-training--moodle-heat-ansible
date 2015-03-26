@@ -36,9 +36,7 @@ parameters:
             localhost    ansible_connection=local
       runcmd:
         - |
-          # upgrade pip from 1.0 to 6.0.8
           /usr/bin/pip install --upgrade pip
-          # downgrade pip to 1.5.6
           /usr/local/bin/pip install pip==1.5.6
           /usr/local/bin/pip install ansible==1.6.5
           mkdir -p /opt/cloud-training
