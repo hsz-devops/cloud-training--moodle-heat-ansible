@@ -31,6 +31,7 @@ parameters:
         - path: /opt/cloud-training/inventory
           content: |
             [all:vars]
+            moodle_hostname=%moodle_hostname%
             database_hostname=%database_hostname%
             database_password=%database_password%
             
@@ -129,6 +130,12 @@ resources:
             "%swift_signal_notify%": { get_attr: [ swift_signal_handle_app1, curl_cli ] }
             "%database_hostname%": { get_attr: [ database, hostname ] }
             "%database_password%": { get_attr: [ password, value ] }
+            "%moodle_hostname%":
+              str_replace:
+                template: "moodle.%prefix%.%domain%"
+                params:
+                  "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+                  "%domain%": { get_param: domain }
 
   dns:
     type: Rackspace::Cloud::DNS
