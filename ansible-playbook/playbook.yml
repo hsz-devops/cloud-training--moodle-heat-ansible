@@ -25,3 +25,6 @@
     - name: Restart Apache
       service: name=apache2 state=restarted
       when: install_packages.changed
+
+    - name: Clone Moodle
+      git: repo=git://git.moodle.org/moodle.git dest=/opt/moodle version=MOODLE_28_STABLE
