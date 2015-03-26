@@ -32,6 +32,8 @@
     - name: Copy Moodle
       command: cp -R /opt/moodle /var/www/html/ creates=/var/www/html/moodle
 
-    - name: Create Moodle Data Directory
-      file: path=/var/moodledata state=directory
+    - name: Set Moodle Permissions
+      file: path=/var/www/html/moodle state=directory mode=0755 recurse=yes
 
+    - name: Create Moodle Data Directory
+      file: path=/var/moodledata state=directory owner=www-data mode=0777 recurse=yes
