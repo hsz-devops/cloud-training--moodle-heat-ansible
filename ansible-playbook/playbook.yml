@@ -4,11 +4,9 @@
 - name: Install Moodle (28)
   hosts: local
   tasks:
-    - name: Ping Nodes
-      ping:
-
-    - name: Debug Database Hostname
-      debug: var=database_hostname
-
-    - name: Debug Database Password
-      debug: var=database_password
+    - name: Install Packages
+      apt: name={{ item }} state=present
+      with_items:
+        - apache2
+        - mysql-client
+        - php5
