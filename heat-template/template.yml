@@ -113,7 +113,7 @@ resources:
           params:
             "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
       flavor: 8 GB General Purpose v1
-      image: Ubuntu 14.04 LTS (Precise Pangolin) (PVHVM)
+      image: Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM)
       networks:
         - uuid: 00000000-0000-0000-0000-000000000000
         - uuid: 11111111-1111-1111-1111-111111111111
