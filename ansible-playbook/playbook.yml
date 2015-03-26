@@ -28,3 +28,10 @@
 
     - name: Clone Moodle
       git: repo=git://git.moodle.org/moodle.git dest=/opt/moodle version=MOODLE_28_STABLE
+
+    - name: Copy Moodle
+      command: cp -R /opt/moodle /var/www/html/ creates=/var/www/html/moodle
+
+    - name: Create Moodle Data Directory
+      file: path=/var/moodledata state=directory
+
