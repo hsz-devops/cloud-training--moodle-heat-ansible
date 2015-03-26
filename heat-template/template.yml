@@ -1,0 +1,170 @@
+heat_template_version: 2013-05-23
+
+description: Deploy A Moodle (28) Environment
+
+parameters:
+  domain:
+    type: string
+    label: Domain
+    default: unicornrainbowponies.com
+  template_user_data:
+    type: string
+    label: Userdata Template
+    default: |
+      #cloud-config
+      apt_upgrade: true
+      packages:
+        - tmux
+        - htop
+        - multitail
+        - build-essential
+        - software-properties-common
+        - python-software-properties
+        - curl
+        - git-core
+        - python-pip
+        - python-apt
+        - python-dev
+      runcmd:
+        - |
+          # upgrade pip from 1.0 to 6.0.8
+          /usr/bin/pip install --upgrade pip
+          # downgrade pip to 1.5.6
+          /usr/local/bin/pip install pip==1.5.6
+          /usr/local/bin/pip install ansible==1.6.5
+          cd /opt
+          git clone https://github.com/cloud-training/moodle-heat-ansible.git
+          cd /opt/moodle-heat-ansible/ansible-playbook
+          
+          %swift_signal_notify% --data-binary '{"status": "SUCCESS"}'
+
+resources:
+  password:
+    type: OS::Heat::RandomString
+    properties:
+      length: 12
+      sequence: lettersdigits
+
+  keypair:
+    type: OS::Nova::KeyPair
+    properties:
+      name:
+        str_replace:
+          template: "%prefix%-moodle-keypair"
+          params:
+            "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+      save_private_key: True
+
+  network:
+    type: Rackspace::Cloud::Network
+    properties:
+      cidr: 192.168.2.0/24
+      label:
+        str_replace:
+          template: "%prefix%-moodle-private"
+          params:
+            "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+
+  database:
+    type: OS::Trove::Instance
+    depends_on: [ password, network ]
+    properties:
+      name:
+        str_replace:
+          template: "%prefix%-moodle-database"
+          params:
+            "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+      flavor: 1GB Instance
+      size: 5
+      networks:
+        - network: 00000000-0000-0000-0000-000000000000
+        - network: 11111111-1111-1111-1111-111111111111
+        - network: { get_resource: network }
+      datastore_type: "mysql"
+      datastore_version: "5.6"
+      databases:
+        - name: moodle
+      users:
+        - name: moodle
+          password: { get_attr: [ password, value ] }
+          databases:
+            - moodle
+
+  swift_signal_handle_app1:
+    type: OS::Heat::SwiftSignalHandle
+
+  server_app1:
+    type: OS::Nova::Server
+    depends_on: [ password, keypair, network, database, swift_signal_handle_app1 ]
+    properties:
+      name:
+        str_replace:
+          template: "%prefix%-moodle-app1"
+          params:
+            "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+      flavor: 8 GB General Purpose v1
+      image: Ubuntu 12.04 LTS (Precise Pangolin) (PVHVM)
+      networks:
+        - uuid: 00000000-0000-0000-0000-000000000000
+        - uuid: 11111111-1111-1111-1111-111111111111
+        - network: { get_resource: network }
+      key_name: { get_resource: keypair }
+      admin_pass: { get_attr: [ password, value ] }
+      config_drive: True
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: { get_param: template_user_data }
+          params:
+            "%swift_signal_notify%": { get_attr: [ swift_signal_handle_app1, curl_cli ] }
+            "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+            "%domain%": { get_param: domain }
+
+  dns:
+    type: Rackspace::Cloud::DNS
+    properties:
+      name:
+        str_replace:
+          template: "%prefix%.%domain%"
+          params:
+            "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+            "%domain%": { get_param: domain }
+      emailAddress: ipadmin@stabletransit.com
+      records:
+        - type: A
+          data: { get_attr: [ server_app1, accessIPv4 ] }
+          name:
+            str_replace:
+              template: "moodle.%prefix%.%domain%"
+              params:
+                "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+                "%domain%": { get_param: domain }
+
+  swift_signal_app1:
+    type: OS::Heat::SwiftSignal
+    properties:
+      handle: { get_resource: swift_signal_handle_app1 }
+      count: 1
+      timeout: 7200
+
+outputs:
+  password:
+    description: Password
+    value: { get_attr: [ password, value ] }
+  public_key:
+    description: Public Key
+    value: { get_attr: [ keypair, public_key ] }
+  private_key:
+    description: Private Key
+    value: { get_attr: [ keypair, private_key ] }
+  database:
+    description: Database
+    value: { get_attr: [ database, hostname ] }
+  url:
+    description: Moodle
+    value:
+      str_replace:
+        template: "moodle.%prefix%.%domain%"
+        params:
+          "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+          "%domain%": { get_param: domain }
