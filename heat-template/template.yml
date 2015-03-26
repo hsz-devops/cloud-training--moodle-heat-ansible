@@ -25,6 +25,15 @@ parameters:
         - python-pip
         - python-apt
         - python-dev
+      write_files:
+        - path: /opt/cloud-training/inventory
+          content: |
+            [all:vars]
+            database_hostname=%database_hostname%
+            database_password=%database_password%
+            
+            [local]
+            localhost    ansible_connection=local
       runcmd:
         - |
           # upgrade pip from 1.0 to 6.0.8
@@ -32,10 +41,11 @@ parameters:
           # downgrade pip to 1.5.6
           /usr/local/bin/pip install pip==1.5.6
           /usr/local/bin/pip install ansible==1.6.5
-          cd /opt
+          mkdir -p /opt/cloud-training
+          cd /opt/cloud-training
           git clone https://github.com/cloud-training/moodle-heat-ansible.git
-          cd /opt/moodle-heat-ansible/ansible-playbook
-          
+          cd /opt/cloud-training/moodle-heat-ansible/ansible-playbook
+          ansible-playbook -i /opt/cloud-training/inventory playbook.yml >> /opt/cloud-training/ansible.log
           %swift_signal_notify% --data-binary '{"status": "SUCCESS"}'
 
 resources:
@@ -117,9 +127,8 @@ resources:
           template: { get_param: template_user_data }
           params:
             "%swift_signal_notify%": { get_attr: [ swift_signal_handle_app1, curl_cli ] }
-            "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
-            "%domain%": { get_param: domain }
-
+            "%database_hostname%": { get_attr: [ database, hostname ] }
+            "%database_password%": { get_attr: [ password, value ] }
   dns:
     type: Rackspace::Cloud::DNS
     properties:

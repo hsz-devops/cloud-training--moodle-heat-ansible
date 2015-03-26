@@ -2,7 +2,7 @@
 # This playbook installs Moodle (28)
 
 - name: Install Moodle (28)
-  hosts: all
+  hosts: local
   tasks:
     - name: Ping Nodes
       ping:
