@@ -12,6 +12,8 @@ parameters:
     label: Userdata Template
     default: |
       #cloud-config
+      output:
+        all: '| tee -a /var/log/cloud-init-output.log'
       apt_upgrade: true
       packages:
         - tmux
@@ -25,15 +27,6 @@ parameters:
         - python-pip
         - python-apt
         - python-dev
-      write_files:
-        - path: /opt/inventory
-          content: |
-            [all:vars]
-            database_hostname=%database_hostname%
-            database_password=%database_password%
-            
-            [local]
-            localhost    ansible_connection=local
       runcmd:
         - |
           /usr/bin/pip install --upgrade pip
@@ -125,8 +118,20 @@ resources:
           template: { get_param: template_user_data }
           params:
             "%swift_signal_notify%": { get_attr: [ swift_signal_handle_app1, curl_cli ] }
-            "%database_hostname%": { get_attr: [ database, hostname ] }
-            "%database_password%": { get_attr: [ password, value ] }
+      personality:
+        "/opt/inventory":
+          str_replace:
+            template: |
+              [all:vars]
+              database_hostname=%database_hostname%
+              database_password=%database_password%
+              
+              [local]
+              localhost    ansible_connection=local
+            params:
+              "%database_hostname%": { get_attr: [ database, hostname ] }
+              "%database_password%": { get_attr: [ password, value ] }
+
   dns:
     type: Rackspace::Cloud::DNS
     properties:
