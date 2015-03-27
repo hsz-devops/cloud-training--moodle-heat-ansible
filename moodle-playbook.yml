@@ -33,7 +33,7 @@
       command: cp -R /opt/moodle /var/www/html/ creates=/var/www/html/moodle
 
     - name: Set Moodle Permissions
-      file: path=/var/www/html/moodle state=directory  owner=www-data group=www-data mode=0755 recurse=yes
+      file: path=/var/www/html/moodle state=directory owner=www-data group=www-data mode=0755 recurse=yes
 
     - name: Create Moodle Data Directory
       file: path=/var/moodledata state=directory owner=www-data group=www-data mode=0777 recurse=yes
