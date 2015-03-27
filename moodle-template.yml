@@ -6,7 +6,7 @@ parameters:
   domain:
     type: string
     label: Domain
-    default: unicornrainbowponies.com
+    default: cloudtrain.me
   template_user_data:
     type: string
     label: Userdata Template
