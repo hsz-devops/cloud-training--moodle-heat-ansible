@@ -47,7 +47,7 @@ parameters:
           git clone https://github.com/cloud-training/moodle-heat-ansible.git
           mv /opt/cloud-training/inventory /opt/cloud-training/moodle-heat-ansible/inventory
           cd /opt/cloud-training/moodle-heat-ansible
-          ansible-playbook moodle-playbook.yml
+          ansible-playbook moodle-playbook.yml -vv
           %swift_signal_notify% --data-binary '{"status": "SUCCESS"}'
 
 resources:
