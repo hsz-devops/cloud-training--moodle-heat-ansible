@@ -30,15 +30,15 @@
       git: repo=git://git.moodle.org/moodle.git dest=/opt/moodle version=MOODLE_28_STABLE
 
     - name: Copy Moodle
-      command: cp -R /opt/moodle /var/www/html/ creates=/var/www/html/moodle
+      command: cp -R /opt/moodle/* /var/www/html/ creates=/var/www/html/README.txt
 
     - name: Set Moodle Permissions
-      file: path=/var/www/html/moodle state=directory owner=www-data group=www-data mode=0755 recurse=yes
+      file: path=/var/www/html state=directory owner=www-data group=www-data mode=0755 recurse=yes
 
     - name: Create Moodle Data Directory
       file: path=/var/moodledata state=directory owner=www-data group=www-data mode=0777 recurse=yes
 
     - name: Install Moodle
-      command: /usr/bin/php install.php --non-interactive --wwwroot=http://{{ moodle_hostname }}/moodle/ --dataroot=/var/moodledata --dbhost={{ database_hostname }} --dbuser=moodle --dbpass={{ database_password }} --fullname="My First Moodle" --shortname="Moodle" --adminpass={{ database_password }} --agree-license chdir=/var/www/html/moodle/admin/cli creates=/var/www/html/moodle/config.php
+      command: /usr/bin/php install.php --non-interactive --wwwroot=http://{{ moodle_hostname }}/ --dataroot=/var/moodledata --dbhost={{ database_hostname }} --dbuser=moodle --dbpass={{ database_password }} --fullname="My First Moodle" --shortname="Moodle" --adminpass={{ database_password }} --agree-license chdir=/var/www/html/admin/cli creates=/var/www/html/config.php
       sudo: yes
       sudo_user: www-data
