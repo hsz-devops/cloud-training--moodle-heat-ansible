@@ -29,8 +29,11 @@
     - name: Clone Moodle
       git: repo=git://git.moodle.org/moodle.git dest=/opt/moodle version=MOODLE_28_STABLE
 
+    - name: Remove Index
+      file: path=/var/www/html/index.html state=absent
+
     - name: Copy Moodle
-      command: cp -R /opt/moodle/* /var/www/html/ creates=/var/www/html/README.txt
+      shell: cp -R /opt/moodle/* /var/www/html/ creates=/var/www/html/README.txt
 
     - name: Set Moodle Permissions
       file: path=/var/www/html state=directory owner=www-data group=www-data mode=0755 recurse=yes
