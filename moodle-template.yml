@@ -7,48 +7,6 @@ parameters:
     type: string
     label: Domain
     default: cloudtrain.me
-  template_user_data:
-    type: string
-    label: Userdata Template
-    default: |
-      #cloud-config
-      output:
-        all: '| tee -a /var/log/cloud-init-output.log'
-      apt_upgrade: true
-      packages:
-        - tmux
-        - htop
-        - multitail
-        - build-essential
-        - software-properties-common
-        - python-software-properties
-        - curl
-        - git-core
-        - python-pip
-        - python-apt
-        - python-dev
-      write_files:
-        - path: /opt/cloud-training/inventory
-          content: |
-            [all:vars]
-            moodle_hostname=%moodle_hostname%
-            database_hostname=%database_hostname%
-            database_password=%database_password%
-            
-            [local]
-            localhost    ansible_connection=local
-      runcmd:
-        - |
-          /usr/bin/pip install --upgrade pip
-          /usr/local/bin/pip install pip==1.5.6
-          /usr/local/bin/pip install ansible==1.6.5
-          mkdir -p /opt/cloud-training
-          cd /opt/cloud-training
-          git clone https://github.com/cloud-training/moodle-heat-ansible.git
-          mv /opt/cloud-training/inventory /opt/cloud-training/moodle-heat-ansible/inventory
-          cd /opt/cloud-training/moodle-heat-ansible
-          ansible-playbook moodle-playbook.yml -vv
-          %swift_signal_notify% --data-binary '{"status": "SUCCESS"}'
 
 resources:
   password:
@@ -105,9 +63,81 @@ resources:
   swift_signal_handle_app1:
     type: OS::Heat::SwiftSignalHandle
 
+  cloud_config_app1:
+    type: OS::Heat::CloudConfig
+    depends_on: [ password, database, swift_signal_handle_app1 ]
+    properties:
+      cloud_config:
+        output:
+          all: '| tee -a /var/log/cloud-init-output.log'
+        apt_upgrade: true
+        packages:
+          - tmux
+          - htop
+          - multitail
+          - build-essential
+          - software-properties-common
+          - python-software-properties
+          - curl
+          - git-core
+          - python-pip
+          - python-apt
+          - python-dev
+        write_files:
+          - path: /opt/cloud-training/inventory
+            permissions: "0600"
+            content:
+              str_replace:
+                template: |
+                  [all:vars]
+                  database_hostname=%database_hostname%
+                  database_password=%database_password%
+                  moodle_hostname=%moodle_hostname%
+                  [local]
+                  localhost    ansible_connection=local
+                params:
+                  "%database_hostname%": { get_attr: [ database, hostname ] }
+                  "%database_password%": { get_attr: [ password, value ] }
+                  "%moodle_hostname%":
+                    str_replace:
+                      template: "moodle.%prefix%.%domain%"
+                      params:
+                        "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
+                        "%domain%": { get_param: domain }
+          - path: /opt/cloud-training/runcmd-bash
+            permissions: "0700"
+            content:
+              str_replace:
+                template: |
+                  #!/bin/bash
+                  set -e
+                  set -x
+                  function exit_failure {
+                    echo "$@"
+                    %swift_signal_notify% --data-binary '{"status": "FAILURE", "reason": "'"$@"'"}'
+                    exit 1
+                  }
+                  function exit_success {
+                    %swift_signal_notify% --data-binary '{"status": "SUCCESS"}'
+                  }
+                  /usr/bin/pip install --upgrade pip || exit_failure "PIP Upgrade PIP Failure"
+                  /usr/local/bin/pip install pip==1.5.6 || exit_failure "PIP Install PIP Failure"
+                  /usr/local/bin/pip install ansible==1.6.5 || exit_failure "PIP Install Ansible Failure"
+                  mkdir -p /opt/cloud-training
+                  cd /opt/cloud-training
+                  git clone https://github.com/cloud-training/moodle-heat-ansible.git || exit_failure "Git Clone Failure"
+                  mv /opt/cloud-training/inventory /opt/cloud-training/moodle-heat-ansible/inventory
+                  cd /opt/cloud-training/moodle-heat-ansible
+                  ansible-playbook moodle-playbook.yml -vv || exit_failure "Ansible Playbook Run Failure"
+                  exit_success
+                params:
+                  "%swift_signal_notify%": { get_attr: [ swift_signal_handle_app1, curl_cli ] }
+        runcmd:
+          - /opt/cloud-training/runcmd-bash
+
   server_app1:
     type: OS::Nova::Server
-    depends_on: [ password, keypair, network, database, swift_signal_handle_app1 ]
+    depends_on: [ password, keypair, network, cloud_config_app1 ]
     properties:
       name:
         str_replace:
@@ -124,19 +154,7 @@ resources:
       admin_pass: { get_attr: [ password, value ] }
       config_drive: True
       user_data_format: RAW
-      user_data:
-        str_replace:
-          template: { get_param: template_user_data }
-          params:
-            "%swift_signal_notify%": { get_attr: [ swift_signal_handle_app1, curl_cli ] }
-            "%database_hostname%": { get_attr: [ database, hostname ] }
-            "%database_password%": { get_attr: [ password, value ] }
-            "%moodle_hostname%":
-              str_replace:
-                template: "moodle.%prefix%.%domain%"
-                params:
-                  "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
-                  "%domain%": { get_param: domain }
+      user_data: { get_resource: cloud_config_app1 }
 
   dns:
     type: Rackspace::Cloud::DNS
@@ -179,10 +197,10 @@ outputs:
     description: Database
     value: { get_attr: [ database, hostname ] }
   url:
-    description: Moodle
+    description: Moodle URL
     value:
       str_replace:
-        template: "moodle.%prefix%.%domain%"
+        template: "http://moodle.%prefix%.%domain%/"
         params:
           "%prefix%": { "Fn::Select": [ "0", { "Fn::Split" : [ "-", { get_param: "OS::stack_id" } ] } ] }
           "%domain%": { get_param: domain }
