@@ -193,9 +193,6 @@ outputs:
   private_key:
     description: Private Key
     value: { get_attr: [ keypair, private_key ] }
-  database:
-    description: Database
-    value: { get_attr: [ database, hostname ] }
   url:
     description: Moodle URL
     value:
