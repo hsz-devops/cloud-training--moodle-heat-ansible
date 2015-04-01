@@ -1,7 +1,7 @@
 ---
-# This playbook installs Moodle (28)
+# This playbook installs Moodle v28
 
-- name: Install Moodle (28)
+- name: Install Moodle v28
   hosts: local
   tasks:
     - name: Install Packages
