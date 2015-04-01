@@ -26,11 +26,11 @@
       service: name=apache2 state=restarted
       when: install_packages.changed
 
-    - name: Clone Moodle
-      git: repo=git://git.moodle.org/moodle.git dest=/opt/moodle version=MOODLE_28_STABLE
-
     - name: Remove Index
       file: path=/var/www/html/index.html state=absent
+
+    - name: Clone Moodle
+      git: repo=git://git.moodle.org/moodle.git dest=/opt/moodle version=MOODLE_28_STABLE
 
     - name: Copy Moodle
       shell: cp -R /opt/moodle/* /var/www/html/ creates=/var/www/html/README.txt

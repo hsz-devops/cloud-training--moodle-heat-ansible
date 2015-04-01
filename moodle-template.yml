@@ -123,7 +123,6 @@ resources:
                 /usr/local/bin/pip install ansible==1.6.5 || exit_failure "PIP Install Ansible Failure"
                 cd /opt/cloud-training
                 git clone https://github.com/cloud-training/moodle-heat-ansible.git || exit_failure "Git Clone Failure"
-                mv /opt/cloud-training/inventory /opt/cloud-training/moodle-heat-ansible/inventory
                 cd /opt/cloud-training/moodle-heat-ansible
                 ansible-playbook moodle-playbook.yml -vv || exit_failure "Ansible Playbook Run Failure"
                 exit_success
